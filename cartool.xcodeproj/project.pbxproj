@@ -10,6 +10,7 @@
 		B06C818B17934BA30082BD37 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B06C818A17934BA30082BD37 /* Foundation.framework */; };
 		B06C818E17934BA30082BD37 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = B06C818D17934BA30082BD37 /* main.m */; };
 		B06C819217934BA30082BD37 /* cartool.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = B06C819117934BA30082BD37 /* cartool.1 */; };
+		B06C819917934BCC0082BD37 /* CoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B06C819817934BCC0082BD37 /* CoreUI.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -31,6 +32,7 @@
 		B06C818D17934BA30082BD37 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		B06C819017934BA30082BD37 /* cartool-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "cartool-Prefix.pch"; sourceTree = "<group>"; };
 		B06C819117934BA30082BD37 /* cartool.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = cartool.1; sourceTree = "<group>"; };
+		B06C819817934BCC0082BD37 /* CoreUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreUI.framework; path = ../../../../../../System/Library/PrivateFrameworks/CoreUI.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B06C819917934BCC0082BD37 /* CoreUI.framework in Frameworks */,
 				B06C818B17934BA30082BD37 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -65,6 +68,7 @@
 		B06C818917934BA30082BD37 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				B06C819817934BCC0082BD37 /* CoreUI.framework */,
 				B06C818A17934BA30082BD37 /* Foundation.framework */,
 			);
 			name = Frameworks;
@@ -219,6 +223,10 @@
 		B06C819617934BA30082BD37 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "cartool/cartool-Prefix.pch";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -228,6 +236,10 @@
 		B06C819717934BA30082BD37 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "cartool/cartool-Prefix.pch";
 				PRODUCT_NAME = "$(TARGET_NAME)";
