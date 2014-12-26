@@ -22,6 +22,10 @@
 
 @interface CUINamedImage : NSObject
 
+@property(readonly) CGSize size;
+@property(readonly) double scale;
+@property(readonly) long long idiom;
+
 -(CGImageRef)image;
 
 @end
@@ -37,10 +41,14 @@
 
 @interface CUICatalog : NSObject
 
+@property(readonly) bool isVectorBased;
+
 -(id)initWithName:(NSString *)n fromBundle:(NSBundle *)b;
 -(id)allKeys;
+-(id)allImageNames;
 -(CUINamedImage *)imageWithName:(NSString *)n scaleFactor:(CGFloat)s;
 -(CUINamedImage *)imageWithName:(NSString *)n scaleFactor:(CGFloat)s deviceIdiom:(int)idiom;
+-(NSArray *)imagesWithName:(NSString *)n;
 
 @end
 
@@ -80,23 +88,34 @@ void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
 	for (NSString *key in [storage allRenditionNames])
 	{
 		printf("%s\n", [key UTF8String]);
-		
-		CGImageRef iphone1X = [[catalog imageWithName:key scaleFactor:1.0 deviceIdiom:kCoreThemeIdiomPhone] image];
-		CGImageRef iphone2X = [[catalog imageWithName:key scaleFactor:2.0 deviceIdiom:kCoreThemeIdiomPhone] image];
-		CGImageRef ipad1X = [[catalog imageWithName:key scaleFactor:1.0 deviceIdiom:kCoreThemeIdiomPad] image];
-		CGImageRef ipad2X = [[catalog imageWithName:key scaleFactor:2.0 deviceIdiom:kCoreThemeIdiomPad] image];
-		
-		if (iphone1X)
-			CGImageWriteToFile(iphone1X, [outputDirectoryPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@~iphone.png", key]]);
-		
-		if (iphone2X)
-			CGImageWriteToFile(iphone2X, [outputDirectoryPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@~iphone@2x.png", key]]);
-		
-		if (ipad1X && ipad1X != iphone1X)
-			CGImageWriteToFile(ipad1X, [outputDirectoryPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@~ipad.png", key]]);
-		
-		if (ipad2X && ipad2X != iphone2X)
-			CGImageWriteToFile(ipad2X, [outputDirectoryPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@~ipad@2x.png", key]]);
+
+        NSArray *images = [catalog imagesWithName:key];
+        for( CUINamedImage *image in images )
+        {
+            if( CGSizeEqualToSize(image.size, CGSizeZero) )
+                printf("\tappears to have a PDF implementation\n");
+            else
+            {
+                CGImageRef cgImage = [image image];
+                NSString *idiom = @"";
+                switch( image.idiom )
+                {
+                    case kCoreThemeIdiomPhone:
+                        idiom = @"~iphone";
+                        break;
+                    case kCoreThemeIdiomPad:
+                        idiom = @"~ipad";
+                        break;
+                    default:
+                        break;
+                }
+                NSString *scale = image.scale > 1.0 ? [NSString stringWithFormat:@"@%dx", (int)floor(image.scale)] : @"";
+                NSString *name = [NSString stringWithFormat:@"%@%@%@.png", key, idiom, scale];
+                printf("\t%s\n", [name UTF8String]);
+                if( outputDirectoryPath )
+                    CGImageWriteToFile(cgImage, [outputDirectoryPath stringByAppendingPathComponent:name]);
+            }
+        }
 	}
 }
 
@@ -104,14 +123,13 @@ int main(int argc, const char * argv[])
 {
 	@autoreleasepool {
 	    
-		if (argc != 3)
+		if (argc != 2)
 		{
-			printf("Usage: cartool Assets.car outputDirectory\n");
+			printf("Usage: cartool <oath to Assets.car> [outputDirectory]\n");
 			return -1;
 		}
 	    
-		exportCarFileAtPath([NSString stringWithUTF8String:argv[1]], [NSString stringWithUTF8String:argv[2]]);
-		
+		exportCarFileAtPath([NSString stringWithUTF8String:argv[1]], argc > 2 ? [NSString stringWithUTF8String:argv[2]] : nil);
 	}
     return 0;
 }
