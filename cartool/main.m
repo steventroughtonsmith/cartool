@@ -123,7 +123,7 @@ int main(int argc, const char * argv[])
 {
 	@autoreleasepool {
 	    
-		if (argc != 2)
+		if (argc < 2)
 		{
 			printf("Usage: cartool <oath to Assets.car> [outputDirectory]\n");
 			return -1;
