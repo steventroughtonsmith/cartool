@@ -14,3 +14,6 @@ cartool /path/to/Assets.car /path/to/outputDirectory
 or
 
 ./cartool /path/to/Assets.car /path/to/outputDirectory
+
+
+
