@@ -8,6 +8,9 @@ Once you've downloaded the zip from github, compile it in Xcode to generate the 
 open terminal
 
 cd /path/to/cartool
+
 cartool /path/to/Assets.car /path/to/outputDirectory
+
 or
+
 ./cartool /path/to/Assets.car /path/to/outputDirectory
