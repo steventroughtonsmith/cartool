@@ -60,12 +60,29 @@ void CGImageWriteToFile(CGImageRef image, NSString *path)
     CFRelease(destination);
 }
 
-
 void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
 {
 	NSError *error = nil;
-	
+	BOOL isDir;
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    
 	outputDirectoryPath = [outputDirectoryPath stringByExpandingTildeInPath];
+    
+    // mkdir
+    if ([fileManager fileExistsAtPath:outputDirectoryPath isDirectory:&isDir]) {
+        if (! isDir) {
+            NSLog(@"Error: output directory %@ exists and is not a directory", outputDirectoryPath);
+            exit(1);
+        }
+    } else {
+        if (![fileManager createDirectoryAtPath:outputDirectoryPath
+                                       withIntermediateDirectories:NO
+                                                        attributes:nil
+                                                             error:&error])
+        {
+            NSLog(@"Error: %@ while trying to create directory %@", error, outputDirectoryPath);
+        }
+    }
 
 	CUIThemeFacet *facet = [CUIThemeFacet themeWithContentsOfURL:[NSURL fileURLWithPath:carPath] error:&error];
 	
