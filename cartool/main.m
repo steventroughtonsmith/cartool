@@ -8,6 +8,21 @@
 
 #import <Foundation/Foundation.h>
 
+typedef enum _kCoreThemeIdiom {
+	kCoreThemeIdiomUniversal,
+	kCoreThemeIdiomPhone,
+	kCoreThemeIdiomPad,
+	kCoreThemeIdiomTV,
+	kCoreThemeIdiomCar,
+	kCoreThemeIdiomWatch,
+	kCoreThemeIdiomMarketing
+} kCoreThemeIdiom;
+
+typedef NS_ENUM(NSInteger, UIUserInterfaceSizeClass) {
+	UIUserInterfaceSizeClassUnspecified = 0,
+	UIUserInterfaceSizeClassCompact     = 1,
+	UIUserInterfaceSizeClassRegular     = 2,
+};
 
 @interface CUICommonAssetStorage : NSObject
 
@@ -23,8 +38,10 @@
 @interface CUINamedImage : NSObject
 
 @property(readonly) CGSize size;
-@property(readonly) double scale;
-@property(readonly) long long idiom;
+@property(readonly) CGFloat scale;
+@property(readonly) kCoreThemeIdiom idiom;
+@property(readonly) UIUserInterfaceSizeClass sizeClassHorizontal;
+@property(readonly) UIUserInterfaceSizeClass sizeClassVertical;
 
 -(CGImageRef)image;
 
@@ -52,29 +69,73 @@
 
 @end
 
-#define kCoreThemeIdiomPhone 1
-#define kCoreThemeIdiomPad 2
+
 
 void CGImageWriteToFile(CGImageRef image, NSString *path)
 {
-    CFURLRef url = (__bridge CFURLRef)[NSURL fileURLWithPath:path];
-    CGImageDestinationRef destination = CGImageDestinationCreateWithURL(url, kUTTypePNG, 1, NULL);
-    CGImageDestinationAddImage(destination, image, nil);
+	CFURLRef url = (__bridge CFURLRef)[NSURL fileURLWithPath:path];
+	CGImageDestinationRef destination = CGImageDestinationCreateWithURL(url, kUTTypePNG, 1, NULL);
+	CGImageDestinationAddImage(destination, image, nil);
 	
-    if (!CGImageDestinationFinalize(destination)) {
-        NSLog(@"Failed to write image to %@", path);
-    }
+	if (!CGImageDestinationFinalize(destination)) {
+		NSLog(@"Failed to write image to %@", path);
+	}
 	
-    CFRelease(destination);
+	CFRelease(destination);
 }
 
+NSString *idiomSuffixForCoreThemeIdiom(kCoreThemeIdiom idiom)
+{
+	switch (idiom) {
+		case kCoreThemeIdiomUniversal:
+			return @"";
+			break;
+		case kCoreThemeIdiomPhone:
+			return @"~iphone";
+			break;
+		case kCoreThemeIdiomPad:
+			return @"~ipad";
+			break;
+		case kCoreThemeIdiomTV:
+			return @"~tv";
+			break;
+		case kCoreThemeIdiomCar:
+			return @"~carplay";
+			break;
+		case kCoreThemeIdiomWatch:
+			return @"~watch";
+			break;
+		case kCoreThemeIdiomMarketing:
+			return @"~marketing";
+			break;
+		default:
+			break;
+	}
+	
+	return @"";
+}
+
+NSString *sizeClassSuffixForSizeSizeClass(UIUserInterfaceSizeClass sizeClass)
+{
+	switch (sizeClass)
+	{
+		case UIUserInterfaceSizeClassCompact:
+			return @"C";
+			break;
+		case UIUserInterfaceSizeClassRegular:
+			return @"R";
+			break;
+		default:
+			return @"A";
+	}
+}
 
 void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
 {
 	NSError *error = nil;
 	
 	outputDirectoryPath = [outputDirectoryPath stringByExpandingTildeInPath];
-
+	
 	CUIThemeFacet *facet = [CUIThemeFacet themeWithContentsOfURL:[NSURL fileURLWithPath:carPath] error:&error];
 	
 	CUICatalog *catalog = [[CUICatalog alloc] init];
@@ -88,48 +149,45 @@ void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
 	for (NSString *key in [storage allRenditionNames])
 	{
 		printf("%s\n", [key UTF8String]);
-
-        NSArray *images = [catalog imagesWithName:key];
-        for( CUINamedImage *image in images )
-        {
-            if( CGSizeEqualToSize(image.size, CGSizeZero) )
-                printf("\tappears to have a PDF implementation\n");
-            else
-            {
-                CGImageRef cgImage = [image image];
-                NSString *idiom = @"";
-                switch( image.idiom )
-                {
-                    case kCoreThemeIdiomPhone:
-                        idiom = @"~iphone";
-                        break;
-                    case kCoreThemeIdiomPad:
-                        idiom = @"~ipad";
-                        break;
-                    default:
-                        break;
-                }
-                NSString *scale = image.scale > 1.0 ? [NSString stringWithFormat:@"@%dx", (int)floor(image.scale)] : @"";
-                NSString *name = [NSString stringWithFormat:@"%@%@%@.png", key, idiom, scale];
-                printf("\t%s\n", [name UTF8String]);
-                if( outputDirectoryPath )
-                    CGImageWriteToFile(cgImage, [outputDirectoryPath stringByAppendingPathComponent:name]);
-            }
-        }
+		
+		NSArray *images = [catalog imagesWithName:key];
+		for( CUINamedImage *image in images )
+		{
+			if( CGSizeEqualToSize(image.size, CGSizeZero) )
+				printf("\tnil image?\n");
+			else
+			{
+				CGImageRef cgImage = [image image];
+				NSString *idiomSuffix = idiomSuffixForCoreThemeIdiom(image.idiom);
+				
+				NSString *sizeClassSuffix = @"";
+				
+				if (image.sizeClassHorizontal || image.sizeClassVertical)
+				{
+					sizeClassSuffix = [NSString stringWithFormat:@"-%@x%@", sizeClassSuffixForSizeSizeClass(image.sizeClassHorizontal), sizeClassSuffixForSizeSizeClass(image.sizeClassVertical)];
+				}
+				
+				NSString *scale = image.scale > 1.0 ? [NSString stringWithFormat:@"@%dx", (int)floor(image.scale)] : @"";
+				NSString *name = [NSString stringWithFormat:@"%@%@%@%@.png", key, idiomSuffix, sizeClassSuffix, scale];
+				printf("\t%s\n", [name UTF8String]);
+				if( outputDirectoryPath )
+					CGImageWriteToFile(cgImage, [outputDirectoryPath stringByAppendingPathComponent:name]);
+			}
+		}
 	}
 }
 
 int main(int argc, const char * argv[])
 {
 	@autoreleasepool {
-	    
+		
 		if (argc < 2)
 		{
-			printf("Usage: cartool <oath to Assets.car> [outputDirectory]\n");
+			printf("Usage: cartool <path to Assets.car> [outputDirectory]\n");
 			return -1;
 		}
-	    
+		
 		exportCarFileAtPath([NSString stringWithUTF8String:argv[1]], argc > 2 ? [NSString stringWithUTF8String:argv[2]] : nil);
 	}
-    return 0;
+	return 0;
 }
