@@ -115,7 +115,7 @@ NSString *idiomSuffixForCoreThemeIdiom(kCoreThemeIdiom idiom)
 	return @"";
 }
 
-NSString *sizeClassSuffixForSizeSizeClass(UIUserInterfaceSizeClass sizeClass)
+NSString *sizeClassSuffixForSizeClass(UIUserInterfaceSizeClass sizeClass)
 {
 	switch (sizeClass)
 	{
@@ -164,7 +164,7 @@ void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
 				
 				if (image.sizeClassHorizontal || image.sizeClassVertical)
 				{
-					sizeClassSuffix = [NSString stringWithFormat:@"-%@x%@", sizeClassSuffixForSizeSizeClass(image.sizeClassHorizontal), sizeClassSuffixForSizeSizeClass(image.sizeClassVertical)];
+					sizeClassSuffix = [NSString stringWithFormat:@"-%@x%@", sizeClassSuffixForSizeClass(image.sizeClassHorizontal), sizeClassSuffixForSizeClass(image.sizeClassVertical)];
 				}
 				
 				NSString *scale = image.scale > 1.0 ? [NSString stringWithFormat:@"@%dx", (int)floor(image.scale)] : @"";
