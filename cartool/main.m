@@ -138,7 +138,7 @@ NSMutableArray *getImagesArray(CUICatalog *catalog, NSString *key)
     {
         CUINamedImage *image = [catalog imageWithName:key scaleFactor:scaleFactor.doubleValue];
 
-        if (image) [images addObject:image];
+        if (image && image.scale == scaleFactor.floatValue) [images addObject:image];
     }
 
     return images;
