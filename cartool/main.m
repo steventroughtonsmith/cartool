@@ -130,6 +130,20 @@ NSString *sizeClassSuffixForSizeClass(UIUserInterfaceSizeClass sizeClass)
 	}
 }
 
+NSMutableArray *getImagesArray(CUICatalog *catalog, NSString *key)
+{
+    NSMutableArray *images = [[NSMutableArray alloc] initWithCapacity:5];
+
+    for (NSNumber *scaleFactor in @[@1, @2, @3])
+    {
+        CUINamedImage *image = [catalog imageWithName:key scaleFactor:scaleFactor.doubleValue];
+
+        if (image && image.scale == scaleFactor.floatValue) [images addObject:image];
+    }
+
+    return images;
+}
+
 void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
 {
 	NSError *error = nil;
@@ -150,7 +164,7 @@ void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
 	{
 		printf("%s\n", [key UTF8String]);
 		
-		NSArray *images = [catalog imagesWithName:key];
+		NSMutableArray *images = getImagesArray(catalog, key);
 		for( CUINamedImage *image in images )
 		{
 			if( CGSizeEqualToSize(image.size, CGSizeZero) )
