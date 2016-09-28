@@ -66,10 +66,11 @@ typedef NS_ENUM(NSInteger, UIUserInterfaceSizeClass) {
 -(CUINamedImage *)imageWithName:(NSString *)n scaleFactor:(CGFloat)s;
 -(CUINamedImage *)imageWithName:(NSString *)n scaleFactor:(CGFloat)s deviceIdiom:(int)idiom;
 -(NSArray *)imagesWithName:(NSString *)n;
+-(CGPDFDocumentRef)pdfDocumentWithName:(NSString *)n;
 
 @end
 
-
+CGDataProviderRef CGPDFDocumentGetDataProvider(CGPDFDocumentRef);
 
 void CGImageWriteToFile(CGImageRef image, NSString *path)
 {
@@ -163,6 +164,31 @@ void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
 	for (NSString *key in [storage allRenditionNames])
 	{
 		printf("%s\n", [key UTF8String]);
+
+                CGPDFDocumentRef pdf = [catalog pdfDocumentWithName:key];
+                if (pdf != NULL)
+                {
+                    CGDataProviderRef provider = CGPDFDocumentGetDataProvider(pdf);
+                    NSData *data = provider ? CFBridgingRelease(CGDataProviderCopyData(provider)) : nil;
+                    if (data == nil)
+                    {
+                        printf("\tnull pdf?\n");
+                    }
+                    else
+                    {
+                        if( outputDirectoryPath )
+                        {
+                            NSString *filename = [key stringByAppendingPathExtension:@"pdf"];
+                            printf("\t%s\n", [filename UTF8String]);
+                            NSError *error;
+                            NSString *path = [outputDirectoryPath stringByAppendingPathComponent:filename];
+                            if ( ![data writeToFile:path options:NSDataWritingWithoutOverwriting error:&error] )
+                            {
+                                NSLog(@"Failed to write PDF to %@: %@", path, error);
+                            }
+                        }
+                    }
+                }
 		
 		NSMutableArray *images = getImagesArray(catalog, key);
 		for( CUINamedImage *image in images )
