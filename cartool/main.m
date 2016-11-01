@@ -163,7 +163,25 @@ void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
 	for (NSString *key in [storage allRenditionNames])
 	{
 		printf("%s\n", [key UTF8String]);
-		
+        
+        NSArray* pathComponents = [key pathComponents];
+        if (pathComponents.count > 1)
+        {
+            // Create subdirectories for namespaced assets (those with names like "some/namespace/image-name")
+            NSArray* subdirectoryComponents = [pathComponents subarrayWithRange:NSMakeRange(0, pathComponents.count - 1)];
+            
+            NSString* subdirectoryPath = [outputDirectoryPath copy];
+            for (NSString* pathComponent in subdirectoryComponents)
+            {
+                subdirectoryPath = [subdirectoryPath stringByAppendingPathComponent:pathComponent];
+            }
+            
+            [[NSFileManager defaultManager] createDirectoryAtPath:subdirectoryPath
+                                      withIntermediateDirectories:YES
+                                                       attributes:nil
+                                                            error:&error];
+        }
+        
 		NSMutableArray *images = getImagesArray(catalog, key);
 		for( CUINamedImage *image in images )
 		{
