@@ -24,51 +24,66 @@ typedef NS_ENUM(NSInteger, UIUserInterfaceSizeClass) {
 	UIUserInterfaceSizeClassRegular     = 2,
 };
 
+CGDataProviderRef CGPDFDocumentGetDataProvider(CGPDFDocumentRef);
+
+typedef struct _renditionkeytoken {
+    unsigned short k;
+    unsigned short v;
+} CUIRenditionKeyToken;
+
 @interface CUICommonAssetStorage : NSObject
 
 -(NSArray *)allAssetKeys;
 -(NSArray *)allRenditionNames;
-
 -(id)initWithPath:(NSString *)p;
-
 -(NSString *)versionString;
+- (NSString*)renditionNameForKeyList:(CUIRenditionKeyToken*) keyList;
 
 @end
 
-@interface CUINamedImage : NSObject
-
-@property(readonly) CGSize size;
-@property(readonly) CGFloat scale;
-@property(readonly) kCoreThemeIdiom idiom;
-@property(readonly) UIUserInterfaceSizeClass sizeClassHorizontal;
-@property(readonly) UIUserInterfaceSizeClass sizeClassVertical;
-
--(CGImageRef)image;
-
-@end
+typedef unsigned long long CUITheme;
+typedef long long CUIRenditionType;
 
 @interface CUIRenditionKey : NSObject
+- (CUIRenditionKeyToken*) keyList;
+- (NSString*) nameOfAttributeName: (int) attributeName;
+- (NSUInteger) themeScale;
+- (kCoreThemeIdiom) themeIdiom;
+- (UIUserInterfaceSizeClass) themeSizeClassHorizontal;
+- (UIUserInterfaceSizeClass) themeSizeClassVertical;
+@end
+
+@interface CUIImage : NSObject
+- (CGImageRef) image;
+@end
+
+@interface CUIThemeRendition : NSObject
++ (NSString*) displayNameForRenditionType:(CUIRenditionType)type;
+
+- (CUIRenditionType) type;
+- (NSString*) name;
+- (CGPDFDocumentRef) pdfDocument;
+- (CGImageRef) unslicedImage;
+- (CGImageRef) uncroppedImage;
+- (id) packedContents;
+- (NSData*) data;
+- (id) utiType;
 @end
 
 @interface CUIThemeFacet : NSObject
 
-+(CUIThemeFacet *)themeWithContentsOfURL:(NSURL *)u error:(NSError **)e;
++(CUITheme) themeWithContentsOfURL:(NSURL *)u error:(NSError **)e;
++(CUITheme) themeWithBytes:(const void *) bytes length:(size_t) len error:(NSError**) e;
++(CUIThemeFacet *)facetWithRenditionKey:(CUIRenditionKey*) key fromTheme:(CUITheme)theme;
+
+- (instancetype) initWithRenditionKey:(CUIRenditionKey*) key fromTheme:(CUITheme)theme;
+- (CGSize) imageSize;
+- (CUIImage*) image;
+- (NSString*) displayName;
+- (CUIRenditionType) renditionType;
+- (CUIThemeRendition*) themeRendition;
 
 @end
-
-@interface CUICatalog : NSObject
-
-@property(readonly) bool isVectorBased;
-
--(id)initWithName:(NSString *)n fromBundle:(NSBundle *)b;
--(id)allKeys;
--(id)allImageNames;
--(CUINamedImage *)imageWithName:(NSString *)n scaleFactor:(CGFloat)s;
--(CUINamedImage *)imageWithName:(NSString *)n scaleFactor:(CGFloat)s deviceIdiom:(int)idiom;
--(NSArray *)imagesWithName:(NSString *)n;
-
-@end
-
 
 
 void CGImageWriteToFile(CGImageRef image, NSString *path)
@@ -84,64 +99,115 @@ void CGImageWriteToFile(CGImageRef image, NSString *path)
 	CFRelease(destination);
 }
 
+void createSubdirectories(NSString* path, NSString* outputDirectoryPath) {
+    NSArray* pathComponents = [path pathComponents];
+    if (pathComponents.count > 1)
+    {
+        // Create subdirectories for namespaced assets (those with names like "some/namespace/image-name")
+        NSArray* subdirectoryComponents = [pathComponents subarrayWithRange:NSMakeRange(0, pathComponents.count - 1)];
+        
+        NSString* subdirectoryPath = [outputDirectoryPath copy];
+        for (NSString* pathComponent in subdirectoryComponents)
+        {
+            subdirectoryPath = [subdirectoryPath stringByAppendingPathComponent:pathComponent];
+        }
+        
+        [[NSFileManager defaultManager] createDirectoryAtPath:subdirectoryPath
+                                  withIntermediateDirectories:YES
+                                                   attributes:nil
+                                                        error:nil];
+    }
+}
+
 NSString *idiomSuffixForCoreThemeIdiom(kCoreThemeIdiom idiom)
 {
-	switch (idiom) {
-		case kCoreThemeIdiomUniversal:
-			return @"";
-			break;
-		case kCoreThemeIdiomPhone:
-			return @"~iphone";
-			break;
-		case kCoreThemeIdiomPad:
-			return @"~ipad";
-			break;
-		case kCoreThemeIdiomTV:
-			return @"~tv";
-			break;
-		case kCoreThemeIdiomCar:
-			return @"~carplay";
-			break;
-		case kCoreThemeIdiomWatch:
-			return @"~watch";
-			break;
-		case kCoreThemeIdiomMarketing:
-			return @"~marketing";
-			break;
-		default:
-			break;
-	}
-	
-	return @"";
+    switch (idiom) {
+        case kCoreThemeIdiomUniversal:
+            return @"";
+            break;
+        case kCoreThemeIdiomPhone:
+            return @"~iphone";
+            break;
+        case kCoreThemeIdiomPad:
+            return @"~ipad";
+            break;
+        case kCoreThemeIdiomTV:
+            return @"~tv";
+            break;
+        case kCoreThemeIdiomCar:
+            return @"~carplay";
+            break;
+        case kCoreThemeIdiomWatch:
+            return @"~watch";
+            break;
+        case kCoreThemeIdiomMarketing:
+            return @"~marketing";
+            break;
+        default:
+            break;
+    }
+    
+    return @"";
 }
 
 NSString *sizeClassSuffixForSizeClass(UIUserInterfaceSizeClass sizeClass)
 {
-	switch (sizeClass)
-	{
-		case UIUserInterfaceSizeClassCompact:
-			return @"C";
-			break;
-		case UIUserInterfaceSizeClassRegular:
-			return @"R";
-			break;
-		default:
-			return @"A";
-	}
+    switch (sizeClass)
+    {
+        case UIUserInterfaceSizeClassCompact:
+            return @"C";
+            break;
+        case UIUserInterfaceSizeClassRegular:
+            return @"R";
+            break;
+        default:
+            return @"A";
+    }
 }
 
-NSMutableArray *getImagesArray(CUICatalog *catalog, NSString *key)
-{
-    NSMutableArray *images = [[NSMutableArray alloc] initWithCapacity:5];
-
-    for (NSNumber *scaleFactor in @[@1, @2, @3])
-    {
-        CUINamedImage *image = [catalog imageWithName:key scaleFactor:scaleFactor.doubleValue];
-
-        if (image && image.scale == scaleFactor.floatValue) [images addObject:image];
+NSString* fileExtension(CUIThemeRendition* rendition) {
+    // try to use the UTI
+    if (rendition.utiType) {
+        NSArray* extensions = CFBridgingRelease(UTTypeCopyAllTagsWithClass((__bridge CFStringRef _Nonnull)(rendition.utiType), kUTTagClassFilenameExtension));
+        if (extensions.count > 0) {
+            return extensions.firstObject;
+        }
     }
+    
+    if (rendition.type == 9) {
+        return @"pdf";
+    }
+    
+    if (rendition.type == 1000) {
+        // use the existing extension
+        NSString* extension = rendition.name.pathExtension;
+        if (extension.length > 0) {
+            return extension;
+        }
+        
+        // unknown UTI, just use it directly
+        return rendition.utiType;
+    }
+    
+    // everything else should probably be a PNG
+    return @"png";
+}
 
-    return images;
+NSString* typedFilename(NSString* renditionName, CUIRenditionKey* key, CUIThemeRendition* rendition) {
+    NSString *idiomSuffix = idiomSuffixForCoreThemeIdiom(key.themeIdiom);
+    NSString *sizeClassSuffix = @"";
+    
+    if (key.themeSizeClassHorizontal || key.themeSizeClassVertical)
+    {
+        sizeClassSuffix = [NSString stringWithFormat:@"-%@x%@", sizeClassSuffixForSizeClass(key.themeSizeClassHorizontal), sizeClassSuffixForSizeClass(key.themeSizeClassVertical)];
+    }
+    
+    NSString *scale = key.themeScale > 1 ? [NSString stringWithFormat:@"@%lux", key.themeScale] : @"";
+    
+    NSString* extension = fileExtension(rendition);
+    
+    NSString *name = [NSString stringWithFormat:@"%@%@%@%@.%@", renditionName, idiomSuffix, sizeClassSuffix, scale, extension];
+    return name;
 }
 
 void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
@@ -149,64 +215,49 @@ void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
 	NSError *error = nil;
 	
 	outputDirectoryPath = [outputDirectoryPath stringByExpandingTildeInPath];
-	
-	CUIThemeFacet *facet = [CUIThemeFacet themeWithContentsOfURL:[NSURL fileURLWithPath:carPath] error:&error];
-	
-	CUICatalog *catalog = [[CUICatalog alloc] init];
-	
-	/* Override CUICatalog to point to a file rather than a bundle */
-	[catalog setValue:facet forKey:@"_storageRef"];
+    
+    CUITheme theme = [CUIThemeFacet themeWithContentsOfURL:[NSURL fileURLWithPath:carPath] error:&error];
+    
+    if (error != nil) {
+        NSLog(@"Error: %@", error);
+        exit(1);
+    }
 	
 	/* CUICommonAssetStorage won't link */
 	CUICommonAssetStorage *storage = [[NSClassFromString(@"CUICommonAssetStorage") alloc] initWithPath:carPath];
-	
-	for (NSString *key in [storage allRenditionNames])
-	{
-		printf("%s\n", [key UTF8String]);
+    
+    for (CUIRenditionKey *key in [storage allAssetKeys]) {
+        CUIThemeFacet* aFacet = [[CUIThemeFacet alloc] initWithRenditionKey:key fromTheme:theme];
         
-        NSArray* pathComponents = [key pathComponents];
-        if (pathComponents.count > 1)
-        {
-            // Create subdirectories for namespaced assets (those with names like "some/namespace/image-name")
-            NSArray* subdirectoryComponents = [pathComponents subarrayWithRange:NSMakeRange(0, pathComponents.count - 1)];
-            
-            NSString* subdirectoryPath = [outputDirectoryPath copy];
-            for (NSString* pathComponent in subdirectoryComponents)
-            {
-                subdirectoryPath = [subdirectoryPath stringByAppendingPathComponent:pathComponent];
+        CUIThemeRendition* rendition = [aFacet themeRendition];
+        if (rendition.type > 1001) {
+            // this is a packed asset, skip it
+            continue;
+        }
+        NSString* renditionName = [storage renditionNameForKeyList:[key keyList]];
+        NSString* filename = typedFilename(renditionName, key, rendition);
+        printf("%s\n", filename.UTF8String);
+        
+        if( outputDirectoryPath ) {
+            createSubdirectories( filename, outputDirectoryPath );
+            NSURL* path = [NSURL fileURLWithPath:[outputDirectoryPath stringByAppendingPathComponent:filename]];
+            if (rendition.pdfDocument) {
+                CGPDFDocumentRef doc = rendition.pdfDocument;
+                CGDataProviderRef provider = CGPDFDocumentGetDataProvider(doc);
+                NSData *data = provider ? CFBridgingRelease(CGDataProviderCopyData(provider)) : nil;
+                [data writeToURL:path atomically:YES];
+            } else if (rendition.data) {
+                [rendition.data writeToURL:path atomically:YES];
+            } else if (rendition.uncroppedImage) {
+                CGImageRef image = rendition.uncroppedImage;
+                CGImageWriteToFile(image, [outputDirectoryPath stringByAppendingPathComponent:filename]);
+            } else {
+                printf("  Unknown file type!\n");
             }
-            
-            [[NSFileManager defaultManager] createDirectoryAtPath:subdirectoryPath
-                                      withIntermediateDirectories:YES
-                                                       attributes:nil
-                                                            error:&error];
         }
         
-		NSMutableArray *images = getImagesArray(catalog, key);
-		for( CUINamedImage *image in images )
-		{
-			if( CGSizeEqualToSize(image.size, CGSizeZero) )
-				printf("\tnil image?\n");
-			else
-			{
-				CGImageRef cgImage = [image image];
-				NSString *idiomSuffix = idiomSuffixForCoreThemeIdiom(image.idiom);
-				
-				NSString *sizeClassSuffix = @"";
-				
-				if (image.sizeClassHorizontal || image.sizeClassVertical)
-				{
-					sizeClassSuffix = [NSString stringWithFormat:@"-%@x%@", sizeClassSuffixForSizeClass(image.sizeClassHorizontal), sizeClassSuffixForSizeClass(image.sizeClassVertical)];
-				}
-				
-				NSString *scale = image.scale > 1.0 ? [NSString stringWithFormat:@"@%dx", (int)floor(image.scale)] : @"";
-				NSString *name = [NSString stringWithFormat:@"%@%@%@%@.png", key, idiomSuffix, sizeClassSuffix, scale];
-				printf("\t%s\n", [name UTF8String]);
-				if( outputDirectoryPath )
-					CGImageWriteToFile(cgImage, [outputDirectoryPath stringByAppendingPathComponent:name]);
-			}
-		}
-	}
+    }
+    
 }
 
 int main(int argc, const char * argv[])
