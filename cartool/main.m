@@ -60,6 +60,7 @@ typedef NS_ENUM(NSInteger, UIUserInterfaceSizeClass) {
 
 @property(readonly) bool isVectorBased;
 
+-(id)initWithURL:(NSURL *)URL error:(NSError **)error;
 -(id)initWithName:(NSString *)n fromBundle:(NSBundle *)b;
 -(id)allKeys;
 -(id)allImageNames;
@@ -149,14 +150,19 @@ void exportCarFileAtPath(NSString * carPath, NSString *outputDirectoryPath)
 	NSError *error = nil;
 	
 	outputDirectoryPath = [outputDirectoryPath stringByExpandingTildeInPath];
-	
-	CUIThemeFacet *facet = [CUIThemeFacet themeWithContentsOfURL:[NSURL fileURLWithPath:carPath] error:&error];
-	
-	CUICatalog *catalog = [[CUICatalog alloc] init];
-	
-	/* Override CUICatalog to point to a file rather than a bundle */
-	[catalog setValue:facet forKey:@"_storageRef"];
-	
+
+	CUICatalog *catalog = nil;
+	if ([CUICatalog instancesRespondToSelector:@selector(initWithURL:error:)]) {
+		/* If CUICatalog has the URL API (Mojave), use it. */
+		catalog = [[CUICatalog alloc] initWithURL:[NSURL fileURLWithPath:carPath] error:&error];
+	} else {
+		CUIThemeFacet *facet = [CUIThemeFacet themeWithContentsOfURL:[NSURL fileURLWithPath:carPath] error:&error];
+		catalog = [[CUICatalog alloc] init];
+		/* Override CUICatalog to point to a file rather than a bundle */
+		[catalog setValue:facet forKey:@"_storageRef"];
+	}
+	NSCAssert(!error, @"Error attempting to open asset catalog (%@): %@", carPath, error);
+
 	/* CUICommonAssetStorage won't link */
 	CUICommonAssetStorage *storage = [[NSClassFromString(@"CUICommonAssetStorage") alloc] initWithPath:carPath];
 	
